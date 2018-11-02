@@ -30,6 +30,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte("objects"))
+		if err != nil {
+			return fmt.Errorf("create bucket: %s", err)
+		}
+		return err
+	})
 	defer db.Close()
 
 	r := chi.NewRouter()
@@ -58,6 +65,10 @@ type Object struct {
 
 func listObjects(w http.ResponseWriter, r *http.Request) {
 	keys := dbGetKeys([]byte("objects"))
+	if len(keys) == 0 {
+		w.Write([]byte("[]"))
+		return
+	}
 	resp, err := jsoniter.Marshal(keys)
 	if err != nil {
 		log.Println(err)
